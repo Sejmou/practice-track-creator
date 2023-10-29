@@ -3,8 +3,18 @@
 	import { onMount } from 'svelte';
 	import type { ActionData } from './$types';
 
+	let files: FileList | null = null;
 	let fileInput: HTMLInputElement | null = null;
 	export let form: ActionData;
+
+	const statusMessages = {
+		nodata: 'Upload 2 or more audio files',
+		data: 'Click below to upload your files',
+		uploading: 'Processing your files...',
+		pending: 'Success! Download the zip file below.',
+		error: 'Upload failed'
+	};
+	let status: keyof typeof statusMessages = 'nodata';
 
 	$: fileDownloadUrl = form?.status === 'success' ? `/download/?id=${form.fileId}` : null;
 
@@ -16,37 +26,39 @@
 		status = 'error';
 	}
 
+	$: if (!files || files.length < 2) {
+		status = 'nodata';
+	} else {
+		status = 'data';
+	}
+
+	$: if (fileDownloadUrl) {
+		status = 'pending';
+	}
+
 	onMount(() => {
 		// document is not available in SSR
 		// TODO: figure out how to solve this more cleanly
 		if (browser) fileInput = document.getElementById('file-input') as HTMLInputElement | null;
 	});
 
-	const statusMessages = {
-		nodata: 'Upload 2 or more audio files',
-		data: 'Click below to upload your files',
-		uploading: 'Processing your files...',
-		pending: 'Success! Download the zip file below.',
-		error: 'Upload failed'
-	};
-
 	function getStatusMessage(status: keyof typeof statusMessages) {
 		return statusMessages[status];
 	}
 
-	let status: keyof typeof statusMessages = 'nodata';
-
 	function handleFileChange(event: Event) {
 		const newFiles = (event.target as HTMLInputElement).files;
-		if (!newFiles || newFiles.length < 2) {
+		if (newFiles && newFiles.length === 1) {
+			// length 0 is allowed as it means that the user probably deliberately removed all files (or cancelled the file picker)
 			alert('Please upload at least 2 files');
 			status = 'nodata';
 			if (fileInput) {
 				fileInput.value = '';
+				files = null;
 			}
 			return;
 		}
-		status = 'data';
+		files = newFiles;
 	}
 </script>
 
@@ -83,6 +95,7 @@
 						accept="audio/mpeg"
 						id="file-input"
 						name="files"
+						bind:files
 						on:change={handleFileChange}
 					/>
 					{#if status}
