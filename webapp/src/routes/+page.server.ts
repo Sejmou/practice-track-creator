@@ -1,7 +1,6 @@
 import type { Actions } from '@sveltejs/kit';
 import { promises as fs, existsSync as exists, statSync } from 'fs';
-import { tempDownloadFolder } from '$lib';
-import env from '$lib/env.server';
+import { TEMP_DOWNLOAD_DIR, AUDIOPROCESSING_API_URL } from '$env/static/private';
 
 setInterval(clearOldFiles, 1000 * 60); // cleanup every minute
 
@@ -12,7 +11,7 @@ export const actions: Actions = {
 		// console.log('files:', files);
 
 		try {
-			const response = await fetch(`${env.API_URL}/practice_tracks`, {
+			const response = await fetch(`${AUDIOPROCESSING_API_URL}/practice_tracks`, {
 				method: 'POST',
 				body: formData
 			});
@@ -20,12 +19,12 @@ export const actions: Actions = {
 				if (response.ok) {
 					// write zip file to file system under temporary downloads folder
 					const fileId = crypto.randomUUID();
-					console.log('creating temporary file in', tempDownloadFolder);
+					console.log('creating temporary file in', TEMP_DOWNLOAD_DIR);
 
-					const filePath = `${tempDownloadFolder}/${fileId}.zip`;
+					const filePath = `${TEMP_DOWNLOAD_DIR}/${fileId}.zip`;
 					const arrayBuffer = await response.arrayBuffer();
-					if (!exists(tempDownloadFolder)) {
-						await fs.mkdir(tempDownloadFolder);
+					if (!exists(TEMP_DOWNLOAD_DIR)) {
+						await fs.mkdir(TEMP_DOWNLOAD_DIR);
 					}
 					await fs.writeFile(filePath, Buffer.from(arrayBuffer));
 					return {
@@ -54,16 +53,16 @@ export const actions: Actions = {
 };
 
 async function clearOldFiles() {
-	console.log('clearing old files in', tempDownloadFolder);
-	if (!exists(tempDownloadFolder)) {
+	console.log('clearing old files in', TEMP_DOWNLOAD_DIR);
+	if (!exists(TEMP_DOWNLOAD_DIR)) {
 		return;
 	}
-	const files = await fs.readdir(tempDownloadFolder);
+	const files = await fs.readdir(TEMP_DOWNLOAD_DIR);
 	const now = Date.now();
 	const oneMinute = 1000 * 60;
 	const oldFiles = files.filter((file) => {
-		const stats = statSync(`${tempDownloadFolder}/${file}`);
+		const stats = statSync(`${TEMP_DOWNLOAD_DIR}/${file}`);
 		return now - stats.mtimeMs > oneMinute;
 	});
-	await Promise.all(oldFiles.map((file) => fs.unlink(`${tempDownloadFolder}/${file}`)));
+	await Promise.all(oldFiles.map((file) => fs.unlink(`${TEMP_DOWNLOAD_DIR}/${file}`)));
 }
