@@ -1,10 +1,20 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
+	import type { ActionData } from './$types';
 
-	let files: FileList | null = null;
 	let fileInput: HTMLInputElement | null = null;
-	let fileDownloadUrl: string | null = null;
+	export let form: ActionData;
+
+	$: fileDownloadUrl = form?.status === 'success' ? `/download/?id=${form.fileId}` : null;
+
+	$: if (form?.status === 'success') {
+		status = 'pending';
+	}
+
+	$: if (form?.status === 'error') {
+		status = 'error';
+	}
 
 	onMount(() => {
 		// document is not available in SSR
@@ -31,54 +41,12 @@
 		if (!newFiles || newFiles.length < 2) {
 			alert('Please upload at least 2 files');
 			status = 'nodata';
-			files = null;
 			if (fileInput) {
 				fileInput.value = '';
 			}
 			return;
 		}
-		files = newFiles;
 		status = 'data';
-	}
-
-	async function handleUpload(event: Event) {
-		event.preventDefault();
-		const formData = new FormData();
-
-		if (!files || files.length < 2) {
-			status = 'nodata';
-			return;
-		}
-
-		for (const file of files) {
-			formData.append('files', file);
-		}
-
-		console.log('uploading the following files:', formData.getAll('files'));
-
-		try {
-			status = 'uploading';
-			const response = await fetch('http://localhost:5000/practice_tracks', {
-				method: 'POST',
-				body: formData
-			});
-			try {
-				const blob = await response.blob();
-				const url = window.URL.createObjectURL(blob);
-				fileDownloadUrl = url;
-			} catch (error) {
-				console.error(error);
-				status = 'error';
-			}
-
-			if (response.ok) {
-				status = 'pending';
-			} else {
-				status = 'error';
-			}
-		} catch (error) {
-			status = 'error';
-		}
 	}
 </script>
 
@@ -102,13 +70,19 @@
 						rest
 					</li>
 				</ol>
-				<form method="POST" on:submit={handleUpload}>
+				<form
+					method="POST"
+					on:submit={() => (status = 'uploading')}
+					enctype="multipart/form-data"
+					action="?/upload"
+				>
 					<input
 						type="file"
 						class="file-input file-input-bordered w-full max-w-xs"
 						multiple
 						accept="audio/mpeg"
 						id="file-input"
+						name="files"
 						on:change={handleFileChange}
 					/>
 					{#if status}
@@ -116,18 +90,14 @@
 					{/if}
 					<div class="flex justify-center mt-4 w-full">
 						{#if status !== 'pending'}
-							<button class="btn btn-primary" disabled={!files || status === 'uploading'}
+							<button
+								class="btn btn-primary"
+								disabled={status === 'uploading' || status === 'nodata'}
 								>{status === 'uploading' ? 'Please wait...' : 'Upload'}</button
 							>
 						{:else}
-							<a
-								class="btn btn-primary"
-								download="practice_tracks.zip"
-								href={fileDownloadUrl}
-								on:click={() => {
-									status = 'nodata';
-									files = null;
-								}}>Download</a
+							<a class="btn btn-primary" download="practice_tracks.zip" href={fileDownloadUrl}
+								>Download</a
 							>
 						{/if}
 					</div>
