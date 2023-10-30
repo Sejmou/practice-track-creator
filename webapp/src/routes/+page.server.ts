@@ -4,6 +4,8 @@ import { TEMP_DOWNLOAD_DIR, AUDIOPROCESSING_API_URL } from '$env/static/private'
 
 setInterval(clearOldFiles, 1000 * 60); // cleanup every minute
 
+const uploadUrl = `${AUDIOPROCESSING_API_URL}/practice_tracks`;
+
 export const actions: Actions = {
 	upload: async ({ request }) => {
 		const formData = await request.formData();
@@ -11,10 +13,12 @@ export const actions: Actions = {
 		console.log('uploading', files.length, 'files to Audio Processing API');
 
 		try {
-			const response = await fetch(`${AUDIOPROCESSING_API_URL}/practice_tracks`, {
+			console.log('sending request to Audio Processing API at ', uploadUrl);
+			const response = await fetch(uploadUrl, {
 				method: 'POST',
 				body: formData
 			});
+			console.log('received response from Audio Processing API');
 			try {
 				if (response.ok) {
 					// write zip file to file system under temporary downloads folder
