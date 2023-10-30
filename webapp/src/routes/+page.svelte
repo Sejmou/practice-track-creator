@@ -16,26 +16,6 @@
 	};
 	let status: keyof typeof statusMessages = 'nodata';
 
-	$: fileDownloadUrl = form?.status === 'success' ? `/download/?id=${form.fileId}` : null;
-
-	$: if (form?.status === 'success') {
-		status = 'pending';
-	}
-
-	$: if (form?.status === 'error') {
-		status = 'error';
-	}
-
-	$: if (!files || files.length < 2) {
-		status = 'nodata';
-	} else {
-		status = 'data';
-	}
-
-	$: if (fileDownloadUrl) {
-		status = 'pending';
-	}
-
 	onMount(() => {
 		// document is not available in SSR
 		// TODO: figure out how to solve this more cleanly
@@ -59,6 +39,27 @@
 			return;
 		}
 		files = newFiles;
+	}
+
+	$: if (!files || files.length < 2) {
+		console.log('no files');
+		status = 'nodata';
+	} else {
+		status = 'data';
+	}
+
+	$: fileDownloadUrl = form?.status === 'success' ? `/download/?id=${form.fileId}` : null;
+
+	$: if (fileDownloadUrl) {
+		status = 'pending';
+	}
+
+	$: if (form?.status === 'success') {
+		status = 'pending';
+	}
+
+	$: if (form?.status === 'error') {
+		status = 'error';
 	}
 </script>
 

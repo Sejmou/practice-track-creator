@@ -7,8 +7,8 @@ setInterval(clearOldFiles, 1000 * 60); // cleanup every minute
 export const actions: Actions = {
 	upload: async ({ request }) => {
 		const formData = await request.formData();
-		// const files = formData.getAll('files');
-		// console.log('files:', files);
+		const files = formData.getAll('files');
+		console.log('uploading', files.length, 'files to Audio Processing API');
 
 		try {
 			const response = await fetch(`${AUDIOPROCESSING_API_URL}/practice_tracks`, {
@@ -36,14 +36,14 @@ export const actions: Actions = {
 					status: 'error'
 				};
 			} catch (error) {
-				console.error('Error processing response from Python API');
+				console.error('Error processing response from Audio Processing API');
 				console.error(error);
 				return {
 					status: 'error'
 				};
 			}
 		} catch (error) {
-			console.error('Error communicating with Python API');
+			console.error('Error communicating with Audio Processing API');
 			console.error(error);
 			return {
 				status: 'error'
@@ -53,7 +53,6 @@ export const actions: Actions = {
 };
 
 async function clearOldFiles() {
-	console.log('clearing old files in', TEMP_DOWNLOAD_DIR);
 	if (!exists(TEMP_DOWNLOAD_DIR)) {
 		return;
 	}
@@ -65,4 +64,5 @@ async function clearOldFiles() {
 		return now - stats.mtimeMs > oneMinute;
 	});
 	await Promise.all(oldFiles.map((file) => fs.unlink(`${TEMP_DOWNLOAD_DIR}/${file}`)));
+	console.log('removed', oldFiles.length, 'old files in temporary downloads folder');
 }
