@@ -13,4 +13,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src/ /app/
 
 RUN pip install Gunicorn
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "app:app", "--access-logfile", "/logs/access.log", "--error-logfile", "/logs/error.log", "--log-level", "debug"]
+# setting large timeout of 5 minutes (300 seconds) as especially on cheap AWS EC2 instances processing can really take a long time
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "app:app", "--access-logfile", "/logs/access.log", "--error-logfile", "/logs/error.log", "--log-level", "debug", "--timeout", "300"]
