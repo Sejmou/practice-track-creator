@@ -6,17 +6,64 @@ from tqdm import tqdm
 
 from utils import get_absolute_path
 
+import logging
+
 
 def create_practice_tracks(input_files: List[str], output_dir: str):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir, exist_ok=True)
-    print(f"Creating practice tracks in {output_dir}")
-    print(f"Found the following files: {[os.path.basename(f) for f in input_files]}")
+    logging.debug(f"Creating practice tracks in {output_dir}")
+    logging.debug(
+        f"Found the following files: {[os.path.basename(f) for f in input_files]}"
+    )
 
+    # TODO: think about how the practice track creation could be sped up - possibilities: parallelization, reusing stuff, ...
     for i in tqdm(range(len(input_files))):
         main_track = input_files[i]
         other_tracks = input_files[:i] + input_files[i + 1 :]
         create_practice_track(main_track, other_tracks, output_dir)
+
+    create_balanced_mix(input_files, output_dir)
+
+
+def create_balanced_mix(
+    track_paths: List[str],
+    output_dir: str,
+):
+    filename = "all.mp3"
+    logging.debug(f"Creating balanced mix of {len(track_paths)} tracks")
+    # get the first track's mean volume (measured in negative dB; volume of 0dB is the maximum volume, so -10dB is quieter than -5)
+    # assumption: all tracks have the same mean volume - if this is not the case, results might be unexpected!
+    original_mean_volume = get_volume(track_paths[0])
+
+    input_streams = [ffmpeg.input(path, format="mp3") for path in track_paths]
+
+    # Combine the input streams into a single output stream (i.e. audio from all files 'playing' at once)
+    # amix is a filter that mixes multiple audio streams into one. however, it only accepts two inputs at a time
+    # hence, we need to add the streams one by one
+    combined_audio = ffmpeg.filter(
+        input_streams, "amix", inputs=len(input_streams), dropout_transition=0
+    )
+
+    # Define a temporary output stream and write it to a temporary file
+    temp_out_path = os.path.join(output_dir, f"temp_all.mp3")
+    temp_out = ffmpeg.output(combined_audio, temp_out_path)
+    ffmpeg.run(temp_out, quiet=True)
+
+    # get the mean volume of the temporary output file
+    temp_mean_volume = get_volume(temp_out_path)
+    # can delete the temporary output file now
+    os.remove(temp_out_path)
+
+    volume_diff = original_mean_volume - temp_mean_volume
+
+    # apply the volume difference to the combined audio stream
+    combined_audio = ffmpeg.filter(combined_audio, "volume", f"{volume_diff}dB")
+
+    # write the output stream with the volume adjustment to the output file
+    out_path = os.path.join(output_dir, filename)
+    out = ffmpeg.output(combined_audio, out_path)
+    ffmpeg.run(out, quiet=True)
 
 
 def create_practice_track(
@@ -26,7 +73,7 @@ def create_practice_track(
     other_tracks_volume: str = "-10dB",
 ):
     main_filename = os.path.basename(main_track_path)
-    print(
+    logging.debug(
         f"Creating practice track for {main_filename} with {len(other_track_paths)} other tracks"
     )
 
@@ -53,7 +100,7 @@ def create_practice_track(
     # Define a temporary output stream and write it to a temporary file
     temp_out_path = os.path.join(output_dir, f"temp_{main_filename}")
     temp_out = ffmpeg.output(combined_audio, temp_out_path)
-    ffmpeg.run(temp_out)
+    ffmpeg.run(temp_out, quiet=True)
 
     # get the mean volume of the temporary output file
     temp_mean_volume = get_volume(temp_out_path)
@@ -68,7 +115,7 @@ def create_practice_track(
     # write the output stream with the volume adjustment to the output file
     out_path = os.path.join(output_dir, os.path.basename(main_track_path))
     out = ffmpeg.output(combined_audio, out_path)
-    ffmpeg.run(out)
+    ffmpeg.run(out, quiet=True)
 
 
 def get_volume(input_path):
