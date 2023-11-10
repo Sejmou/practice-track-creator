@@ -38,7 +38,7 @@ def practice_tracks():
         return make_response(jsonify({"error": "No files included"}), 400)
 
     files = request.files.getlist(files_key)
-    logging.info(f"Received {len(files)} files:", files)
+    logging.info(f"Received {len(files)} files: {files}")
 
     if len(files) == 0:
         return make_response(jsonify({"error": "No files uploaded"}, 400))
@@ -63,7 +63,7 @@ def practice_tracks():
             for file in os.listdir(dir_path)
             if file.endswith(".mp3")
         ]
-        logging.debug("temp file paths:", temp_file_paths)
+        logging.debug(f"temp file paths: {temp_file_paths}")
         output_path = os.path.join(dir_path, "practice_tracks")
         create_practice_tracks(temp_file_paths, output_path)
 
