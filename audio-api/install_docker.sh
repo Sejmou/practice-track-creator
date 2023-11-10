@@ -16,3 +16,8 @@ sudo apt-get update
 
 # Pt. 2: Install docker stuff
 sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# Pt. 3: Add user to docker group
+sudo usermod -a -G docker $(whoami)
+# Reload groups
+newgrp docker
