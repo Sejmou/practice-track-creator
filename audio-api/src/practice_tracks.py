@@ -3,10 +3,10 @@ import ffmpeg
 from typing import List
 import os
 from tqdm import tqdm
+import logging
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 from utils import get_absolute_path
-
-import logging
 
 
 def create_practice_tracks(input_files: List[str], output_dir: str):
@@ -17,13 +17,26 @@ def create_practice_tracks(input_files: List[str], output_dir: str):
         f"Found the following files: {[os.path.basename(f) for f in input_files]}"
     )
 
-    # TODO: think about how the practice track creation could be sped up - possibilities: parallelization, reusing stuff, ...
-    for i in tqdm(range(len(input_files))):
-        main_track = input_files[i]
-        other_tracks = input_files[:i] + input_files[i + 1 :]
-        create_practice_track(main_track, other_tracks, output_dir)
+    with ProcessPoolExecutor() as executor:
+        futures = []
+        for i in range(len(input_files)):
+            main_track = input_files[i]
+            other_tracks = input_files[:i] + input_files[i + 1 :]
+            futures.append(
+                executor.submit(
+                    create_practice_track, main_track, other_tracks, output_dir
+                )
+            )
 
-    create_balanced_mix(input_files, output_dir)
+        futures.append(executor.submit(create_balanced_mix, input_files, output_dir))
+
+        # wait for all futures to complete (track progress with tqdm)
+        for future in tqdm(as_completed(futures), total=len(futures)):
+            # not interested in result (which we would get with future.result()) as it is None
+            pass
+            # if we were interested, we could get it with future.result() and store it in a variable like so:
+            # result = future.result()
+            # print(result)
 
 
 def create_balanced_mix(

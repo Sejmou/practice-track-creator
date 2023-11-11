@@ -1,15 +1,17 @@
-from flask import Flask, request, jsonify, send_file, make_response
+from flask import Flask, request, jsonify, make_response
 import os
 from zipfile import ZipFile
 import uuid
 from flask_cors import CORS
-from practice_tracks import create_practice_tracks
 from werkzeug.utils import secure_filename
 import shutil
 import logging
+import uuid
 
-from utils import get_absolute_path
 from settings import DEBUG
+from practice_tracks import create_practice_tracks
+from utils import get_absolute_path
+from s3 import upload_file_to_s3, create_presigned_s3_url
 
 logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -66,13 +68,26 @@ def practice_tracks():
         logging.debug(f"temp file paths: {temp_file_paths}")
         output_path = os.path.join(dir_path, "practice_tracks")
         create_practice_tracks(temp_file_paths, output_path)
+        logging.debug(f"Created practice tracks in {output_path}")
 
         # zip the practice tracks
-        zip_path = os.path.join(dir_path, "practice_tracks.zip")
+        zip_name = f"{uuid.uuid4()}.zip"
+        zip_path = os.path.join(dir_path, zip_name)
         with ZipFile(zip_path, "w") as zip_file:
             for file in os.listdir(output_path):
                 zip_file.write(os.path.join(output_path, file), file)
-        return make_response(send_file(zip_path), 200)
+
+        logging.debug(f"Created zip file at {zip_path}")
+
+        # upload the zip file to S3
+        upload_file_to_s3(zip_path)
+
+        # create a presigned url for the zip file
+        url = create_presigned_s3_url(zip_name)
+        logging.debug(f"Created presigned url: {url}")
+
+        # send the presigned url as a response
+        return make_response(jsonify({"url": url}), 200)
     except Exception as e:
         logging.exception(e)
         return make_response(jsonify({"error": "Something went wrong"}), 500)
