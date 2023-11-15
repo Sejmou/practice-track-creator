@@ -1,13 +1,29 @@
 version: '3'
 services:
-  server:
+  # serves the API and handles requests; schedules audio processing tasks for the celery-worker (via redis)
+  flask:
     env_file:
       - .env
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.flask
     ports:
       - 5000:8000
     volumes:
+      - ./logs/flask:/logs
+  # broker for communication between celery worker(s) and flask app
+  redis:
+    image: redis
+  # celery worker; does the actual audio processing and storing of results to S3
+  celery-worker:
+    env_file:
+      - .env
+    build:
+      context: .
+      dockerfile: Dockerfile.celery
+    command: celery -A celery_worker.celery worker --loglevel=info
+    volumes:
       - ./logs:/logs
-
+    depends_on:
+      - redis
+  

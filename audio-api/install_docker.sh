@@ -1,3 +1,4 @@
+#!/bin/bash
 # Pt. 1: Setup docker's apt repo
 # Add Docker's official GPG key:
 sudo apt-get update

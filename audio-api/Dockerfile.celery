@@ -1,0 +1,17 @@
+FROM python:3.13.0a1-bookworm
+
+RUN mkdir /logs
+
+WORKDIR /app
+
+# install ffmpeg
+RUN apt-get update && apt-get install -y ffmpeg
+
+COPY requirements.txt requirements.txt 
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY src/ /app/
+
+RUN pip install Gunicorn
+# celery -A app.celery worker --loglevel=info
+CMD ["celery", "-A", "app.celery", "worker", "--loglevel", "info"]
