@@ -15,7 +15,7 @@ from shared.s3 import download_file_from_s3, upload_file_to_s3, create_presigned
 @app.task(bind=True, serializer="json")
 def create(self, upload_id: str):
     """
-    Creates practice tracks for a given upload_id
+    Downloads practice tracks for a given upload_id
     :param upload_id: the id of the upload for which to create practice tracks
     :return: A signature that when called will create the practice tracks
     """

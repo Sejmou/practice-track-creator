@@ -26,4 +26,16 @@ services:
       - ./logs:/logs
     depends_on:
       - redis
+  minio:
+    image: minio/minio
+    command: server /data
+    ports:
+      - 9000:9000
+    volumes:
+      - ./data:/data
+    env_file:
+      - .env
+    environment:
+      MINIO_ACCESS_KEY: ${LOCAL_S3_KEY}
+      MINIO_SECRET_KEY: ${LOCAL_S3_SECRET}
   

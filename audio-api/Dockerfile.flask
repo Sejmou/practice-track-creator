@@ -4,7 +4,7 @@ RUN mkdir /logs
 
 WORKDIR /app
 
-COPY requirements-flask.txt requirements.txt 
+COPY src/requirements-flask_app.txt requirements.txt 
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/ /app/

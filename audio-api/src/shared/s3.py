@@ -8,9 +8,13 @@ from .settings import (
     S3_REGION,
     S3_ENDPOINT,
     S3_BUCKET,
+    LOCAL_S3_KEY,
+    LOCAL_S3_SECRET,
+    LOCAL_S3_ENDPOINT,
 )
 
-s3 = boto3.client(
+# cloud storage that is hosted somewhere online (e.g. AWS or alternative providers like Wasabi)
+remote_s3 = boto3.client(
     "s3",
     aws_access_key_id=S3_KEY,
     aws_secret_access_key=S3_SECRET,
@@ -18,8 +22,18 @@ s3 = boto3.client(
     endpoint_url=S3_ENDPOINT,
 )
 
+# cloud storage that is hosted locally (e.g. MinIO)
+local_s3 = boto3.client(
+    "s3",
+    aws_access_key_id=LOCAL_S3_KEY,
+    aws_secret_access_key=LOCAL_S3_SECRET,
+    endpoint_url=LOCAL_S3_ENDPOINT,
+)
 
-def download_file_from_s3(object_name, file_path, bucket_name=S3_BUCKET):
+
+def download_file_from_s3(
+    object_name, file_path, bucket_name=S3_BUCKET, use_local_s3=False
+):
     """Download a file from an S3 bucket
 
     Args:
@@ -30,6 +44,7 @@ def download_file_from_s3(object_name, file_path, bucket_name=S3_BUCKET):
     Returns:
         bool: True if file was downloaded, else False
     """
+    s3 = local_s3 if use_local_s3 else remote_s3
     try:
         result = s3.download_file(bucket_name, object_name, file_path)
         logging.debug(f"Downloaded file from S3: {result}")
@@ -40,7 +55,9 @@ def download_file_from_s3(object_name, file_path, bucket_name=S3_BUCKET):
     return True
 
 
-def upload_file_to_s3(file_path, object_name=None, bucket_name=S3_BUCKET):
+def upload_file_to_s3(
+    file_path, object_name=None, bucket_name=S3_BUCKET, use_local_s3=False
+):
     """Upload a file to an S3 bucket
 
     Args:
@@ -51,6 +68,8 @@ def upload_file_to_s3(file_path, object_name=None, bucket_name=S3_BUCKET):
     Returns:
         bool: True if file was uploaded, else False
     """
+    s3 = local_s3 if use_local_s3 else remote_s3
+
     if object_name is None:
         object_name = os.path.basename(file_path)
     try:
@@ -75,7 +94,7 @@ def create_presigned_s3_url(object_name, bucket_name=S3_BUCKET, expiration=3600)
     :return: Presigned URL as string. If error, returns None.
     """
     try:
-        response = s3.generate_presigned_url(
+        response = remote_s3.generate_presigned_url(
             "get_object",
             Params={"Bucket": bucket_name, "Key": object_name},
             ExpiresIn=expiration,
@@ -89,7 +108,7 @@ def create_presigned_s3_url(object_name, bucket_name=S3_BUCKET, expiration=3600)
     return response
 
 
-def remove_file_from_s3(object_name, bucket_name=S3_BUCKET):
+def remove_file_from_s3(object_name, bucket_name=S3_BUCKET, use_local_s3=False):
     """Remove a file from an S3 bucket
 
     Args:
@@ -99,6 +118,7 @@ def remove_file_from_s3(object_name, bucket_name=S3_BUCKET):
     Returns:
         bool: True if file was removed, else False
     """
+    s3 = local_s3 if use_local_s3 else remote_s3
     try:
         result = s3.delete_object(Bucket=bucket_name, Key=object_name)
         logging.debug(f"Removed file from S3: {result}")

@@ -7,11 +7,10 @@ WORKDIR /app
 # install ffmpeg
 RUN apt-get update && apt-get install -y ffmpeg
 
-COPY requirements.txt requirements.txt 
+COPY src/requirements-celery_worker.txt requirements.txt 
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/ /app/
 
-RUN pip install Gunicorn
 # celery -A app.celery worker --loglevel=info
 CMD ["celery", "-A", "app.celery", "worker", "--loglevel", "info"]

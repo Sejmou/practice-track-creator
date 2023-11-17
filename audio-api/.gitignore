@@ -264,3 +264,4 @@ pyrightconfig.json
 # custom stuff
 logs/
 tmp/
+data/
